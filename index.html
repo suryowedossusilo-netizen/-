@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Gaji Bulanan Ayang </title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+  body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  header { text-align: center; color: #fff; margin-bottom: 24px; }
+  header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+  header p { opacity: 0.85; }
+
+  .card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+
+  .settings { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 140px; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+  input, select { width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+  input:focus { outline: none; border-color: #667eea; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #667eea; color: #fff; padding: 10px 8px; font-size: 0.85rem; }
+  th, td { text-align: center; }
+  td { padding: 6px 4px; border-bottom: 1px solid #eee; }
+  td input { text-align: right; padding: 6px 8px; font-size: 0.95rem; }
+  td .num { font-weight: 600; color: #333; }
+  tbody tr:hover { background: #f5f7ff; }
+
+  .btn { border: none; border-radius: 8px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+  .btn-add { background: #667eea; color: #fff; }
+  .btn-add:hover { background: #5568d3; }
+  .btn-del { background: #ff5252; color: #fff; padding: 5px 10px; font-size: 0.85rem; }
+  .btn-del:hover { background: #e04848; }
+  .btn-reset { background: #eee; color: #555; }
+  .btn-reset:hover { background: #ddd; }
+
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .stat { border-radius: 12px; padding: 18px; color: #fff; }
+  .stat .label { font-size: 0.85rem; opacity: 0.9; margin-bottom: 6px; }
+  .stat .value { font-size: 1.4rem; font-weight: 700; }
+  .stat.komisi { background: linear-gradient(135deg, #11998e, #38ef7d); }
+  .stat.bensin { background: linear-gradient(135deg, #2193b0, #6dd5ed); }
+  .stat.gaji   { background: linear-gradient(135deg, #f7971e, #ffd200); color: #4a3200; }
+
+  .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .note { font-size: 0.8rem; color: #888; margin-top: 10px; }
+
+  @media (max-width: 640px) {
+    table { font-size: 0.8rem; }
+    th, td { padding: 6px 2px; }
+    td input { padding: 4px; }
+  }
+  @media print {
+    body { background: #fff; }
+    .actions, .btn-del { display: none; }
+  }
+</style>
+<base target="_blank">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Kalkulator Gaji Bulanan Ayang</h1>
+    <p>Komisi 30% dari spend pelanggan ➕ uang bensin dari kantor</p>
+  </header>
+
+  <div class="card">
+    <div class="settings">
+      <div class="field">
+        <label for="bulan">Bulan</label>
+        <input type="month" id="bulan">
+      </div>
+      <div class="field">
+        <label for="persen">Komisi (%)</label>
+        <input type="number" id="persen" value="30" min="0" max="100">
+      </div>
+      <div class="field">
+        <label for="jmlHari">Jumlah Hari Kerja</label>
+        <input type="number" id="jmlHari" value="30" min="1" max="31">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Hari</th>
+          <th>Jml Customer</th>
+          <th>Total Spend (Rp)</th>
+          <th>Komisi (Rp)</th>
+          <th>Bensin (Rp)</th>
+          <th>Hapus</th>
+        </tr>
+      </thead>
+      <tbody id="tabelHari"></tbody>
+    </table>
+    <div class="actions">
+      <button class="btn btn-add" onclick="tambahHari()">+ Tambah Hari</button>
+      <button class="btn btn-reset" onclick="resetSemua()">🗑 Reset Semua</button>
+      <button class="btn btn-reset" onclick="window.print()">🖨 Cetak</button>
+    </div>
+    <p class="note">💾 Data tersimpan otomatis di browser ini.</p>
+  </div>
+
+  <div class="card">
+    <div class="summary">
+      <div class="stat komisi">
+        <div class="label">Total Komisi (30%)</div>
+        <div class="value" id="totKomisi">Rp 0</div>
+      </div>
+      <div class="stat bensin">
+        <div class="label">Uang Bensin (dari kantor)</div>
+        <div class="value" id="totBensin">Rp 0</div>
+      </div>
+      <div class="stat gaji">
+        <div class="label">💰 GAJI BULANAN</div>
+        <div class="value" id="gajiBersih">Rp 0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'gajiPijatData';
+let data = JSON.parse(localStorage.getItem(KEY) || 'null');
+
+// Data awal: 30 hari kosong, atau muat data tersimpan
+if (!data || !data.rows) {
+  data = { bulan: '', persen: 30, rows: Array.from({length: 30}, () => ({cust: '', spend: '', bensin: ''})) };
+}
+
+const rupiah = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const num = v => parseFloat(v) || 0;
+
+function render() {
+  document.getElementById('bulan').value = data.bulan;
+  document.getElementById('persen').value = data.persen;
+
+  const tb = document.getElementById('tabelHari');
+  tb.innerHTML = '';
+  data.rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="num">${i + 1}</td>
+      <td><input type="number" min="0" value="${r.cust}" onchange="ubah(${i},'cust',this.value)"></td>
+      <td><input type="number" min="0" value="${r.spend}" onchange="ubah(${i},'spend',this.value)"></td>
+      <td class="num">${rupiah(num(r.spend) * data.persen / 100)}</td>
+      <td><input type="number" min="0" value="${r.bensin}" onchange="ubah(${i},'bensin',this.value)"></td>
+      <td><button class="btn btn-del" onclick="hapusHari(${i})">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  hitung();
+}
+
+function hitung() {
+  let komisi = 0, bensin = 0;
+  data.rows.forEach(r => {
+    komisi += num(r.spend) * data.persen / 100;
+    bensin += num(r.bensin);
+  });
+  document.getElementById('totKomisi').textContent = rupiah(komisi);
+  document.getElementById('totBensin').textContent = rupiah(bensin);
+  document.getElementById('gajiBersih').textContent = rupiah(komisi + bensin);
+}
+
+function ubah(i, field, val) {
+  data.rows[i][field] = val;
+  simpan();
+  hitung();
+  // update kolom komisi di baris itu saja (render ulang ringan)
+  const rows = document.querySelectorAll('#tabelHari tr');
+  rows[i].children[3].textContent = rupiah(num(data.rows[i].spend) * data.persen / 100);
+}
+
+function tambahHari() {
+  data.rows.push({cust: '', spend: '', bensin: ''});
+  simpan(); render();
+}
+
+function hapusHari(i) {
+  if (confirm('Hapus hari ke-' + (i + 1) + '?')) {
+    data.rows.splice(i, 1);
+    simpan(); render();
+  }
+}
+
+function resetSemua() {
+  if (confirm('Yakin mau hapus SEMUA data?')) {
+    data.rows = Array.from({length: parseInt(document.getElementById('jmlHari').value) || 30},
+      () => ({cust: '', spend: '', bensin: ''}));
+    simpan(); render();
+  }
+}
+
+function simpan() {
+  data.bulan = document.getElementById('bulan').value;
+  data.persen = parseFloat(document.getElementById('persen').value) || 0;
+  localStorage.setItem(KEY, JSON.stringify(data));
+}
+
+document.getElementById('bulan').addEventListener('change', simpan);
+document.getElementById('persen').addEventListener('change', () => { simpan(); render(); });
+document.getElementById('jmlHari').addEventListener('change', () => {
+  const n = Math.min(31, Math.max(1, parseInt(document.getElementById('jmlHari').value) || 30));
+  data.rows = Array.from({length: n}, (_, i) => data.rows[i] || {cust: '', spend: '', bensin: ''});
+  simpan(); render();
+});
+
+render();
+</script>
+</body>
+</html>
