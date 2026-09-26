@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kalkulator Gaji Bulanan Ayang </title>
+<title>Kalkulator Gaji Bulanan Ayang</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
   body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
@@ -26,6 +26,7 @@
   td { padding: 6px 4px; border-bottom: 1px solid #eee; }
   td input { text-align: right; padding: 6px 8px; font-size: 0.95rem; }
   td .num { font-weight: 600; color: #333; }
+  td .num.hijau { color: #11998e; }
   tbody tr:hover { background: #f5f7ff; }
 
   .btn { border: none; border-radius: 8px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
@@ -47,6 +48,19 @@
   .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
   .note { font-size: 0.8rem; color: #888; margin-top: 10px; }
 
+  /* ===== ANIMASI KUCING ===== */
+  #catCanvas {
+    position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 9999;
+  }
+  #catToast {
+    position: fixed; top: 14px; right: 14px; z-index: 10000;
+    background: #fff; border-radius: 12px; padding: 10px 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25); font-size: 0.8rem; color: #555;
+    max-width: 230px; display: none;
+  }
+  #catToast b { color: #764ba2; }
+
   @media (max-width: 640px) {
     table { font-size: 0.8rem; }
     th, td { padding: 6px 2px; }
@@ -54,16 +68,17 @@
   }
   @media print {
     body { background: #fff; }
-    .actions, .btn-del { display: none; }
+    .actions, .btn-del, #catCanvas, #catToast { display: none; }
   }
 </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body>
 <div class="container">
   <header>
     <h1>Kalkulator Gaji Bulanan Ayang</h1>
-    <p>Komisi 30% dari spend pelanggan ➕ uang bensin dari kantor</p>
+    <p>Komisi 30% dari spend pelanggan ➕ uang bensin dari kantor 🐾</p>
   </header>
 
   <div class="card">
@@ -79,6 +94,14 @@
       <div class="field">
         <label for="jmlHari">Jumlah Hari Kerja</label>
         <input type="number" id="jmlHari" value="30" min="1" max="31">
+      </div>
+      <div class="field">
+        <label for="bensinNormal">Bensin (1 customer) Rp</label>
+        <input type="number" id="bensinNormal" value="5000" min="0">
+      </div>
+      <div class="field">
+        <label for="bensinBonus">Bensin (&gt;1 customer) Rp</label>
+        <input type="number" id="bensinBonus" value="10000" min="0">
       </div>
     </div>
   </div>
@@ -102,13 +125,14 @@
       <button class="btn btn-reset" onclick="resetSemua()">🗑 Reset Semua</button>
       <button class="btn btn-reset" onclick="window.print()">🖨 Cetak</button>
     </div>
-    <p class="note">💾 Data tersimpan otomatis di browser ini.</p>
+    <p class="note">💾 Data tersimpan otomatis di browser ini.<br>
+    🐱 <b>Tips:</b> klik di layar, kucingnya akan lompat &amp; kejar kursormu!</p>
   </div>
 
   <div class="card">
     <div class="summary">
       <div class="stat komisi">
-        <div class="label">Total Komisi (30%)</div>
+        <div class="label" id="lblKomisi">Total Komisi (30%)</div>
         <div class="value" id="totKomisi">Rp 0</div>
       </div>
       <div class="stat bensin">
@@ -123,21 +147,35 @@
   </div>
 </div>
 
+<canvas id="catCanvas"></canvas>
+<div id="catToast">🐱 <b>Kucing kamu muncul!</b> Klik di layar — dia akan kejar kursormu.</div>
+
 <script>
 const KEY = 'gajiPijatData';
 let data = JSON.parse(localStorage.getItem(KEY) || 'null');
 
 // Data awal: 30 hari kosong, atau muat data tersimpan
 if (!data || !data.rows) {
-  data = { bulan: '', persen: 30, rows: Array.from({length: 30}, () => ({cust: '', spend: '', bensin: ''})) };
+  data = { bulan: '', persen: 30, bensinNormal: 5000, bensinBonus: 10000,
+           rows: Array.from({length: 30}, () => ({cust: '', spend: ''})) };
 }
 
 const rupiah = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 const num = v => parseFloat(v) || 0;
 
+// ===== BENSIN OTOMATIS =====
+function bensinHari(cust) {
+  if (cust <= 0) return 0;                       // tanpa customer: tidak dapat bensin
+  if (cust === 1) return num(data.bensinNormal); // 1 customer: bensin normal
+  return num(data.bensinBonus);                  // >1 customer: bensin bonus
+}
+
 function render() {
   document.getElementById('bulan').value = data.bulan;
   document.getElementById('persen').value = data.persen;
+  document.getElementById('bensinNormal').value = data.bensinNormal ?? 5000;
+  document.getElementById('bensinBonus').value = data.bensinBonus ?? 10000;
+  document.getElementById('lblKomisi').textContent = 'Total Komisi (' + data.persen + '%)';
 
   const tb = document.getElementById('tabelHari');
   tb.innerHTML = '';
@@ -148,7 +186,7 @@ function render() {
       <td><input type="number" min="0" value="${r.cust}" onchange="ubah(${i},'cust',this.value)"></td>
       <td><input type="number" min="0" value="${r.spend}" onchange="ubah(${i},'spend',this.value)"></td>
       <td class="num">${rupiah(num(r.spend) * data.persen / 100)}</td>
-      <td><input type="number" min="0" value="${r.bensin}" onchange="ubah(${i},'bensin',this.value)"></td>
+      <td class="num hijau">${rupiah(bensinHari(num(r.cust)))}</td>
       <td><button class="btn btn-del" onclick="hapusHari(${i})">✕</button></td>`;
     tb.appendChild(tr);
   });
@@ -159,7 +197,7 @@ function hitung() {
   let komisi = 0, bensin = 0;
   data.rows.forEach(r => {
     komisi += num(r.spend) * data.persen / 100;
-    bensin += num(r.bensin);
+    bensin += bensinHari(num(r.cust));
   });
   document.getElementById('totKomisi').textContent = rupiah(komisi);
   document.getElementById('totBensin').textContent = rupiah(bensin);
@@ -170,13 +208,13 @@ function ubah(i, field, val) {
   data.rows[i][field] = val;
   simpan();
   hitung();
-  // update kolom komisi di baris itu saja (render ulang ringan)
   const rows = document.querySelectorAll('#tabelHari tr');
   rows[i].children[3].textContent = rupiah(num(data.rows[i].spend) * data.persen / 100);
+  rows[i].children[4].textContent = rupiah(bensinHari(num(data.rows[i].cust)));
 }
 
 function tambahHari() {
-  data.rows.push({cust: '', spend: '', bensin: ''});
+  data.rows.push({cust: '', spend: ''});
   simpan(); render();
 }
 
@@ -190,7 +228,7 @@ function hapusHari(i) {
 function resetSemua() {
   if (confirm('Yakin mau hapus SEMUA data?')) {
     data.rows = Array.from({length: parseInt(document.getElementById('jmlHari').value) || 30},
-      () => ({cust: '', spend: '', bensin: ''}));
+      () => ({cust: '', spend: ''}));
     simpan(); render();
   }
 }
@@ -198,18 +236,245 @@ function resetSemua() {
 function simpan() {
   data.bulan = document.getElementById('bulan').value;
   data.persen = parseFloat(document.getElementById('persen').value) || 0;
+  data.bensinNormal = parseFloat(document.getElementById('bensinNormal').value) || 0;
+  data.bensinBonus  = parseFloat(document.getElementById('bensinBonus').value) || 0;
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
 document.getElementById('bulan').addEventListener('change', simpan);
 document.getElementById('persen').addEventListener('change', () => { simpan(); render(); });
+document.getElementById('bensinNormal').addEventListener('change', () => { simpan(); render(); });
+document.getElementById('bensinBonus').addEventListener('change', () => { simpan(); render(); });
 document.getElementById('jmlHari').addEventListener('change', () => {
   const n = Math.min(31, Math.max(1, parseInt(document.getElementById('jmlHari').value) || 30));
-  data.rows = Array.from({length: n}, (_, i) => data.rows[i] || {cust: '', spend: '', bensin: ''});
+  data.rows = Array.from({length: n}, (_, i) => data.rows[i] || {cust: '', spend: ''});
   simpan(); render();
 });
 
 render();
+
+/* ==========================================================
+   🐱 KUCING ANIMASI YANG BISA DIMAINKAN (canvas)
+   - Kejar kursor
+   - Klik layar -> dia melompat ke arah klik ("POUNCE!")
+   - Duduk & melambaikan ekor kalau diam
+   ========================================================== */
+(function() {
+  const cv = document.getElementById('catCanvas');
+  const ctx = cv.getContext('2d');
+  let W, H;
+  function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize();
+  addEventListener('resize', resize);
+
+  const cat = {
+    x: W / 2, y: H / 2, vx: 0, vy: 0,
+    scale: 1, dir: 1,          // dir: arah hadap (1 kanan, -1 kiri)
+    state: 'chase',            // chase | pounce | idle
+    pounceT: 0, blinkT: 0, meowT: 0,
+    happiness: 0
+  };
+
+  const mouse = { x: W / 2, y: H / 2 };
+  addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, {passive: true});
+
+  addEventListener('click', e => {
+    // kucing melompat ke titik klik
+    cat.state = 'pounce';
+    cat.pounceT = 40;
+    const dx = e.clientX - cat.x, dy = e.clientY - cat.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const power = Math.min(d, 500) / 500 * 14 + 6;
+    cat.vx = dx / d * power;
+    cat.vy = dy / d * power - 4;
+    cat.happiness = 60;
+    meow();
+  });
+
+  const MEOWS = ['Meow!', 'Miaww~', 'Purr...', 'Miaou!', 'Nyaa!', '🐾'];
+  function meow() {
+    cat.meowT = 50;
+    const toast = document.getElementById('catToast');
+    toast.style.display = 'block';
+    toast.innerHTML = '🐱 <b>' + MEOWS[Math.floor(Math.random() * MEOWS.length)] + '</b>';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.style.display = 'none', 1400);
+  }
+
+  function update() {
+    const dx = mouse.x - cat.x, dy = mouse.y - cat.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (cat.state === 'pounce') {
+      cat.pounceT--;
+      cat.vy += 0.5;               // gravitasi
+      cat.x += cat.vx;
+      cat.y += cat.vy;
+      if (cat.y > H - 70) { cat.y = H - 70; cat.vy = 0; cat.vx *= 0.8; }
+      if (cat.pounceT <= 0) cat.state = 'chase';
+    } else if (dist > 90) {
+      cat.state = 'chase';
+      const sp = Math.min(dist / 25, 9);
+      cat.vx += (dx / dist * sp - cat.vx) * 0.12;
+      cat.vy += (dy / dist * sp - cat.vy) * 0.12;
+      cat.x += cat.vx;
+      cat.y += cat.vy;
+    } else {
+      cat.state = 'idle';
+      cat.vx *= 0.85; cat.vy *= 0.85;
+      cat.x += cat.vx; cat.y += cat.vy;
+    }
+
+    cat.x = Math.max(50, Math.min(W - 50, cat.x));
+    cat.y = Math.max(70, Math.min(H - 70, cat.y));
+
+    if (Math.abs(cat.vx) > 0.3) cat.dir = cat.vx > 0 ? 1 : -1;
+
+    // efek squash & stretch saat bergerak
+    const speed = Math.hypot(cat.vx, cat.vy);
+    cat.scale = 1 + Math.min(speed * 0.02, 0.25);
+
+    if (cat.happiness > 0) cat.happiness--;
+    cat.blinkT = (cat.blinkT + 1) % 220;
+  }
+
+  function drawCat() {
+    ctx.save();
+    ctx.translate(cat.x, cat.y);
+    ctx.scale(cat.dir * cat.scale, cat.scale);
+    const FUR = '#ff9f43', FUR2 = '#feca57';
+    const jumping = cat.state === 'pounce';
+    const bodyY = jumping ? -10 : 0;
+
+    // Ekor (melengkung & bergoyang)
+    const wag = Math.sin(Date.now() / 120) * (cat.state === 'idle' ? 12 : 6);
+    ctx.strokeStyle = FUR;
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-28, 8);
+    ctx.quadraticCurveTo(-55, 0 + wag, -60, -22 + wag);
+    ctx.stroke();
+
+    // Badan
+    ctx.fillStyle = FUR;
+    ctx.beginPath();
+    ctx.ellipse(0, 5 + bodyY, 30, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Perut
+    ctx.fillStyle = '#fff3d6';
+    ctx.beginPath();
+    ctx.ellipse(2, 12 + bodyY, 15, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Kaki
+    ctx.fillStyle = FUR2;
+    [[-18, 20], [18, 20]].forEach(([lx, ly]) => {
+      ctx.beginPath();
+      ctx.ellipse(lx, ly + (jumping ? -8 : 0), 7, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Kepala
+    ctx.fillStyle = FUR;
+    ctx.beginPath();
+    ctx.arc(24, -16 + bodyY, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Telinga
+    [[14, -34], [34, -34]].forEach(([ex, ey]) => {
+      ctx.fillStyle = FUR;
+      ctx.beginPath();
+      ctx.moveTo(ex - 7, ey + 10);
+      ctx.lineTo(ex, ey - 7);
+      ctx.lineTo(ex + 7, ey + 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#ff6b9d';
+      ctx.beginPath();
+      ctx.moveTo(ex - 3.5, ey + 8);
+      ctx.lineTo(ex, ey - 1);
+      ctx.lineTo(ex + 3.5, ey + 8);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    // Mata (kedip alami)
+    const blinking = cat.blinkT > 200;
+    ctx.fillStyle = '#2d3436';
+    if (blinking) {
+      ctx.fillRect(18, -20 + bodyY, 6, 1.5);
+      ctx.fillRect(30, -20 + bodyY, 6, 1.5);
+    } else {
+      ctx.beginPath(); ctx.arc(21, -19 + bodyY, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(33, -19 + bodyY, 3, 0, Math.PI * 2); ctx.fill();
+      // kilau mata
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(22, -20 + bodyY, 1, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(34, -20 + bodyY, 1, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Hidung & mulut
+    ctx.fillStyle = '#ff6b9d';
+    ctx.beginPath();
+    ctx.moveTo(26, -10 + bodyY);
+    ctx.lineTo(29, -10 + bodyY);
+    ctx.lineTo(27.5, -8 + bodyY);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#2d3436';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(27.5, -8 + bodyY);
+    ctx.quadraticCurveTo(27.5, -5 + bodyY, 24, -5 + bodyY);
+    ctx.moveTo(27.5, -8 + bodyY);
+    ctx.quadraticCurveTo(27.5, -5 + bodyY, 31, -5 + bodyY);
+    ctx.stroke();
+
+    // Kumis
+    ctx.strokeStyle = 'rgba(45,52,54,0.6)';
+    [[-1, -12], [0, -10], [-1, -8]].forEach(([o, wy]) => {
+      ctx.beginPath(); ctx.moveTo(16, wy + bodyY); ctx.lineTo(6, wy + o + bodyY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(39, wy + bodyY); ctx.lineTo(49, wy + o + bodyY); ctx.stroke();
+    });
+
+    // Hati kecil kalau senang
+    if (cat.happiness > 0 && cat.happiness % 20 < 10) {
+      ctx.fillStyle = '#ff4757';
+      const hy = -50 + bodyY - (60 - cat.happiness) * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(27, hy + 5);
+      ctx.bezierCurveTo(19, hy - 3, 11, hy + 3, 27, hy + 13);
+      ctx.bezierCurveTo(43, hy + 3, 35, hy - 3, 27, hy + 5);
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    // Label "Meow!" kecil saat baru diklik
+    if (cat.meowT > 0) {
+      cat.meowT--;
+      ctx.globalAlpha = cat.meowT / 50;
+      ctx.font = 'bold 16px Segoe UI';
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#764ba2';
+      ctx.lineWidth = 4;
+      const my = cat.y - 70 - (50 - cat.meowT) * 0.6;
+      ctx.strokeText('Meow!', cat.x + 30, my);
+      ctx.fillText('Meow!', cat.x + 30, my);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, W, H);
+    update();
+    drawCat();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
 </script>
 </body>
 </html>
