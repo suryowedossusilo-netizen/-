@@ -92,6 +92,7 @@
   }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div class="container">
@@ -181,7 +182,7 @@ function dataDefault(nHari) {
       { jenis: 'Refleksi', harga: 60000 },
       { jenis: 'Totok Wajah', harga: 45000 }
     ],
-    days: Array.from({length: nHari}, () => ({ customers: [] }))
+    days: Array.from({length: nHari}, () => ({ tgl: '', customers: [] }))
   };
 }
 function pelangganBaru() {
@@ -272,7 +273,7 @@ function renderHari() {
 
     card.innerHTML = `
       <div class="day-head">
-        <b>Hari ke-${d + 1}</b>
+        <b>📅 <input type="date" value="${day.tgl || ''}" onchange="ubahTgl(${d},this.value)" style="width:auto;padding:4px 8px;font-size:0.85rem"></b>
         <span class="day-badge">${nCust} pelanggan</span>
         <span class="day-badge" style="background:#11998e">Komisi ${rupiah(totKom)}</span>
         <span class="spacer"></span>
@@ -326,6 +327,11 @@ function simpan() {
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
+function ubahTgl(d, val) {
+  data.days[d].tgl = val;
+  simpan();
+}
+
 function ubahTreatment(i, field, val) {
   data.treatments[i][field] = field === 'harga' ? (parseFloat(val) || 0) : val;
   simpan(); renderHari(); hitung();
@@ -362,7 +368,7 @@ function hapusCust(d, i) {
   simpan(); renderHari(); hitung();
 }
 function tambahHari() {
-  data.days.push({ customers: [] });
+  data.days.push({ tgl: '', customers: [] });
   data.jmlHari = data.days.length;
   document.getElementById('jmlHari').value = data.jmlHari;
   simpan(); renderHari(); hitung();
@@ -386,7 +392,7 @@ function resetSemua() {
 });
 document.getElementById('jmlHari').addEventListener('change', () => {
   const n = Math.min(31, Math.max(1, parseInt(document.getElementById('jmlHari').value) || 30));
-  while (data.days.length < n) data.days.push({ customers: [] });
+  while (data.days.length < n) data.days.push({ tgl: '', customers: [] });
   data.days.length = n;
   data.jmlHari = n;
   simpan(); render();
