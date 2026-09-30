@@ -125,13 +125,6 @@
         <label for="bensinBonus">Bensin (&gt;1 pelanggan) Rp</label>
         <input type="number" id="bensinBonus" value="10000" min="0">
       </div>
-      <div class="field">
-        <label for="komisiDari">Komisi dihitung dari</label>
-        <select id="komisiDari">
-          <option value="trt">Harga Treatment saja</option>
-          <option value="all">Treatment + Ongkir</option>
-        </select>
-      </div>
     </div>
   </div>
 
@@ -195,7 +188,7 @@ const KEY = 'gajiPijatDataV2';
 function dataDefault(nHari) {
   return {
     bulan: '', persen: 30, jmlHari: nHari,
-    bensinNormal: 5000, bensinBonus: 10000, komisiDari: 'trt',
+    bensinNormal: 5000, bensinBonus: 10000,
     treatments: [
       { jenis: 'Pijat Tradisional', harga: 50000 },
       { jenis: 'Pijat Aromaterapi', harga: 75000 },
@@ -222,8 +215,8 @@ function hargaTrt(cust) {
   return cust.trts.reduce((s, t) => s + num(data.treatments[t] && data.treatments[t].harga), 0);
 }
 function komisiCust(cust) {
-  const dasar = data.komisiDari === 'all' ? hargaTrt(cust) + num(cust.ongkir) : hargaTrt(cust);
-  return dasar * num(data.persen) / 100;
+  // komisi hanya dari harga treatment — ongkir diterima full tanpa persenan
+  return hargaTrt(cust) * num(data.persen) / 100;
 }
 function bensinHari(day) {
   const n = day.customers.length;
@@ -239,7 +232,6 @@ function render() {
   document.getElementById('jmlHari').value = data.jmlHari;
   document.getElementById('bensinNormal').value = data.bensinNormal;
   document.getElementById('bensinBonus').value = data.bensinBonus;
-  document.getElementById('komisiDari').value = data.komisiDari;
   document.getElementById('lblKomisi').textContent = 'Total Komisi (' + data.persen + '%)';
 
   renderKatalog();
@@ -359,7 +351,6 @@ function simpan() {
   data.jmlHari = parseInt(document.getElementById('jmlHari').value) || 30;
   data.bensinNormal = parseFloat(document.getElementById('bensinNormal').value) || 0;
   data.bensinBonus  = parseFloat(document.getElementById('bensinBonus').value) || 0;
-  data.komisiDari = document.getElementById('komisiDari').value;
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
@@ -418,7 +409,7 @@ function resetSemua() {
   }
 }
 
-['bulan','persen','bensinNormal','bensinBonus','komisiDari'].forEach(id => {
+['bulan','persen','bensinNormal','bensinBonus'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { simpan(); render(); });
 });
 document.getElementById('jmlHari').addEventListener('change', () => {
