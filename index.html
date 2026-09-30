@@ -69,7 +69,6 @@
   .stat .label { font-size: 0.85rem; opacity: 0.9; margin-bottom: 6px; }
   .stat .value { font-size: 1.35rem; font-weight: 700; }
   .stat.komisi { background: linear-gradient(135deg, #11998e, #38ef7d); }
-  .stat.bensin { background: linear-gradient(135deg, #2193b0, #6dd5ed); }
   .stat.ongkir { background: linear-gradient(135deg, #8e54e9, #4776e6); }
   .stat.spend  { background: linear-gradient(135deg, #457fca, #5691c8); }
   .stat.gaji   { background: linear-gradient(135deg, #f7971e, #ffd200); color: #4a3200; }
@@ -98,7 +97,7 @@
 <div class="container">
   <header>
     <h1>Kalkulator Gaji Bulanan Ayang</h1>
-    <p>Komisi dari treatment pelanggan ➕ uang bensin dari kantor 🐾</p>
+    <p>Komisi dari treatment ➕ ongkos full (tanpa potongan) 🐾</p>
   </header>
 
   <!-- ===== PENGATURAN ===== -->
@@ -116,14 +115,6 @@
       <div class="field">
         <label for="jmlHari">Jumlah Hari Kerja</label>
         <input type="number" id="jmlHari" value="30" min="1" max="31">
-      </div>
-      <div class="field">
-        <label for="bensinNormal">Bensin (1 pelanggan) Rp</label>
-        <input type="number" id="bensinNormal" value="5000" min="0">
-      </div>
-      <div class="field">
-        <label for="bensinBonus">Bensin (&gt;1 pelanggan) Rp</label>
-        <input type="number" id="bensinBonus" value="10000" min="0">
       </div>
     </div>
   </div>
@@ -157,16 +148,12 @@
         <div class="value" id="totSpend">Rp 0</div>
       </div>
       <div class="stat ongkir">
-        <div class="label">Total Ongkir</div>
+        <div class="label">Total Ongkos / Bensin (full)</div>
         <div class="value" id="totOngkir">Rp 0</div>
       </div>
       <div class="stat komisi">
         <div class="label" id="lblKomisi">Total Komisi (30%)</div>
         <div class="value" id="totKomisi">Rp 0</div>
-      </div>
-      <div class="stat bensin">
-        <div class="label">Uang Bensin (dari kantor)</div>
-        <div class="value" id="totBensin">Rp 0</div>
       </div>
       <div class="stat gaji">
         <div class="label">💰 GAJI BULANAN</div>
@@ -179,7 +166,7 @@
 </div>
 
 <canvas id="catCanvas"></canvas>
-<div id="catToast">🐱 <b>4 kucing kamu muncul!</b> Klik di layar — kucing terdekat akan lompat.</div>
+<div id="catToast">🐱🍊 <b>Kucing &amp; capybara kamu muncul!</b> Klik di layar — yang terdekat akan lompat.</div>
 
 <script>
 const KEY = 'gajiPijatDataV2';
@@ -188,7 +175,6 @@ const KEY = 'gajiPijatDataV2';
 function dataDefault(nHari) {
   return {
     bulan: '', persen: 30, jmlHari: nHari,
-    bensinNormal: 5000, bensinBonus: 10000,
     treatments: [
       { jenis: 'Pijat Tradisional', harga: 50000 },
       { jenis: 'Pijat Aromaterapi', harga: 75000 },
@@ -218,20 +204,11 @@ function komisiCust(cust) {
   // komisi hanya dari harga treatment — ongkir diterima full tanpa persenan
   return hargaTrt(cust) * num(data.persen) / 100;
 }
-function bensinHari(day) {
-  const n = day.customers.length;
-  if (n <= 0) return 0;
-  if (n === 1) return num(data.bensinNormal);
-  return num(data.bensinBonus);
-}
-
 // ===== RENDER =====
 function render() {
   document.getElementById('bulan').value = data.bulan;
   document.getElementById('persen').value = data.persen;
   document.getElementById('jmlHari').value = data.jmlHari;
-  document.getElementById('bensinNormal').value = data.bensinNormal;
-  document.getElementById('bensinBonus').value = data.bensinBonus;
   document.getElementById('lblKomisi').textContent = 'Total Komisi (' + data.persen + '%)';
 
   renderKatalog();
@@ -298,7 +275,6 @@ function renderHari() {
         <b>Hari ke-${d + 1}</b>
         <span class="day-badge">${nCust} pelanggan</span>
         <span class="day-badge" style="background:#11998e">Komisi ${rupiah(totKom)}</span>
-        <span class="day-badge" style="background:#2193b0">Bensin ${rupiah(bensinHari(day))}</span>
         <span class="spacer"></span>
         <button class="btn btn-add btn-sm" onclick="tambahCust(${d})">+ Pelanggan</button>
         <button class="btn btn-del" onclick="hapusHari(${d})">✕ Hapus Hari</button>
@@ -325,20 +301,18 @@ function renderHari() {
 }
 
 function hitung() {
-  let komisi = 0, bensin = 0, spend = 0, ongkir = 0;
+  let komisi = 0, spend = 0, ongkir = 0;
   data.days.forEach(day => {
     day.customers.forEach(c => {
       spend += hargaTrt(c);
       ongkir += num(c.ongkir);
       komisi += komisiCust(c);
     });
-    bensin += bensinHari(day);
   });
   document.getElementById('totSpend').textContent = rupiah(spend);
   document.getElementById('totOngkir').textContent = rupiah(ongkir);
   document.getElementById('totKomisi').textContent = rupiah(komisi);
-  document.getElementById('totBensin').textContent = rupiah(bensin);
-  document.getElementById('gajiBersih').textContent = rupiah(komisi + bensin);
+  document.getElementById('gajiBersih').textContent = rupiah(komisi + ongkir);
 }
 
 // ===== AKSI =====
@@ -349,8 +323,6 @@ function simpan() {
   data.bulan = document.getElementById('bulan').value;
   data.persen = parseFloat(document.getElementById('persen').value) || 0;
   data.jmlHari = parseInt(document.getElementById('jmlHari').value) || 30;
-  data.bensinNormal = parseFloat(document.getElementById('bensinNormal').value) || 0;
-  data.bensinBonus  = parseFloat(document.getElementById('bensinBonus').value) || 0;
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
@@ -409,7 +381,7 @@ function resetSemua() {
   }
 }
 
-['bulan','persen','bensinNormal','bensinBonus'].forEach(id => {
+['bulan','persen'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { simpan(); render(); });
 });
 document.getElementById('jmlHari').addEventListener('change', () => {
@@ -433,7 +405,7 @@ render();
   resize();
   addEventListener('resize', resize);
 
-  const MEOWS = ['Meow!', 'Miaww~', 'Purr...', 'Miaou!', 'Nyaa!', 'Mrrp!', '🐾'];
+  const MEOWS = ['Meow!', 'Miaww~', 'Purr...', 'Miaou!', 'Nyaa!', 'Mrrp!', '🐾', 'Squeak!', 'Purr~', '🍊'];
   const PALET = [
     { fur: '#ff9f43', fur2: '#feca57' },
     { fur: '#a4b0be', fur2: '#ced6e0' },
@@ -455,6 +427,23 @@ render();
     };
   }
   const cats = [0, 1, 2, 3].map(buatKucing);
+
+  // ===== CAPYBARA (jalan santai di bagian bawah layar) =====
+  function buatCapybara(i) {
+    const shades = ['#a07850', '#96714d', '#8b6a4a'];
+    return {
+      x: Math.random() * innerWidth,
+      y: innerHeight - 60,
+      vx: 0, vy: 0, dir: Math.random() < 0.5 ? 1 : -1,
+      fur: shades[i % shades.length],
+      state: 'walk', idleT: 0, pounceT: 0, gantiArahT: 0,
+      blinkT: Math.floor(Math.random() * 240),
+      happyT: 0, meowT: 0, step: 0,
+      orange: i === 0   // capybara pertama pakai jeruk di kepala 🍊
+    };
+  }
+  const capys = [0, 1, 2].map(buatCapybara);
+  const animals = cats.concat(capys);
   const mouse = { x: -100, y: -100 };
   addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
   addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, {passive: true});
@@ -471,7 +460,7 @@ render();
   addEventListener('click', e => {
     if (e.target.closest('button, input, select, a, summary, label, td')) return;
     let terdekat = null, dMin = Infinity;
-    cats.forEach(c => {
+    animals.forEach(c => {
       const d = Math.hypot(e.clientX - c.x, e.clientY - c.y);
       if (d < dMin) { dMin = d; terdekat = c; }
     });
@@ -659,7 +648,9 @@ render();
     ctx.clearRect(0, 0, W, H);
     cats.forEach(update);
     pisahkan();
+    capys.forEach(updateCapy);
     cats.forEach(drawCat);
+    capys.forEach(drawCapy);
     requestAnimationFrame(loop);
   }
   loop();
