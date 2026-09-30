@@ -70,6 +70,7 @@
   .stat .value { font-size: 1.35rem; font-weight: 700; }
   .stat.komisi { background: linear-gradient(135deg, #11998e, #38ef7d); }
   .stat.ongkir { background: linear-gradient(135deg, #8e54e9, #4776e6); }
+  .stat.lembur { background: linear-gradient(135deg, #b24592, #f15f79); }
   .stat.spend  { background: linear-gradient(135deg, #457fca, #5691c8); }
   .stat.gaji   { background: linear-gradient(135deg, #f7971e, #ffd200); color: #4a3200; }
 
@@ -98,7 +99,7 @@
 <div class="container">
   <header>
     <h1>Kalkulator Gaji Bulanan Ayang</h1>
-    <p>Komisi dari treatment ➕ ongkos full (tanpa potongan) 🐾</p>
+    <p>Komisi dari treatment ➕ ongkos full ➕ lembur (opsional, Rp10.000/lembur) 🐾</p>
   </header>
 
   <!-- ===== PENGATURAN ===== -->
@@ -152,6 +153,10 @@
         <div class="label">Total Ongkos / Bensin (full)</div>
         <div class="value" id="totOngkir">Rp 0</div>
       </div>
+      <div class="stat lembur">
+        <div class="label">Total Lembur 🌙</div>
+        <div class="value" id="totLembur">Rp 0</div>
+      </div>
       <div class="stat komisi">
         <div class="label" id="lblKomisi">Total Komisi (30%)</div>
         <div class="value" id="totKomisi">Rp 0</div>
@@ -182,7 +187,7 @@ function dataDefault(nHari) {
       { jenis: 'Refleksi', harga: 60000 },
       { jenis: 'Totok Wajah', harga: 45000 }
     ],
-    days: Array.from({length: nHari}, () => ({ tgl: '', customers: [] }))
+    days: Array.from({length: nHari}, () => ({ tgl: '', lembur: '', customers: [] }))
   };
 }
 function pelangganBaru() {
@@ -274,6 +279,11 @@ function renderHari() {
     card.innerHTML = `
       <div class="day-head">
         <b>📅 <input type="date" value="${day.tgl || ''}" onchange="ubahTgl(${d},this.value)" style="width:auto;padding:4px 8px;font-size:0.85rem"></b>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;color:#555;margin:0;cursor:pointer">🌙 Lembur
+          <input type="number" min="0" placeholder="0" value="${day.lembur || ''}" onchange="ubahLembur(${d},this.value)" style="width:64px;padding:4px 6px;font-size:0.85rem;text-align:right">
+          <span style="color:#999;font-weight:500">x Rp10.000</span>
+        </label>
+        ${num(day.lembur) > 0 ? `<span class="day-badge" style="background:#b24592">Lembur ${rupiah(num(day.lembur) * 10000)}</span>` : ''}
         <span class="day-badge">${nCust} pelanggan</span>
         <span class="day-badge" style="background:#11998e">Komisi ${rupiah(totKom)}</span>
         <span class="spacer"></span>
@@ -302,8 +312,9 @@ function renderHari() {
 }
 
 function hitung() {
-  let komisi = 0, spend = 0, ongkir = 0;
+  let komisi = 0, spend = 0, ongkir = 0, lembur = 0;
   data.days.forEach(day => {
+    lembur += num(day.lembur) * 10000;
     day.customers.forEach(c => {
       spend += hargaTrt(c);
       ongkir += num(c.ongkir);
@@ -312,8 +323,9 @@ function hitung() {
   });
   document.getElementById('totSpend').textContent = rupiah(spend);
   document.getElementById('totOngkir').textContent = rupiah(ongkir);
+  document.getElementById('totLembur').textContent = rupiah(lembur);
   document.getElementById('totKomisi').textContent = rupiah(komisi);
-  document.getElementById('gajiBersih').textContent = rupiah(komisi + ongkir);
+  document.getElementById('gajiBersih').textContent = rupiah(komisi + ongkir + lembur);
 }
 
 // ===== AKSI =====
@@ -330,6 +342,11 @@ function simpan() {
 function ubahTgl(d, val) {
   data.days[d].tgl = val;
   simpan();
+}
+
+function ubahLembur(d, val) {
+  data.days[d].lembur = val;
+  simpan(); renderHari(); hitung();
 }
 
 function ubahTreatment(i, field, val) {
@@ -368,7 +385,7 @@ function hapusCust(d, i) {
   simpan(); renderHari(); hitung();
 }
 function tambahHari() {
-  data.days.push({ tgl: '', customers: [] });
+  data.days.push({ tgl: '', lembur: '', customers: [] });
   data.jmlHari = data.days.length;
   document.getElementById('jmlHari').value = data.jmlHari;
   simpan(); renderHari(); hitung();
@@ -392,7 +409,7 @@ function resetSemua() {
 });
 document.getElementById('jmlHari').addEventListener('change', () => {
   const n = Math.min(31, Math.max(1, parseInt(document.getElementById('jmlHari').value) || 30));
-  while (data.days.length < n) data.days.push({ tgl: '', customers: [] });
+  while (data.days.length < n) data.days.push({ tgl: '', lembur: '', customers: [] });
   data.days.length = n;
   data.jmlHari = n;
   simpan(); render();
