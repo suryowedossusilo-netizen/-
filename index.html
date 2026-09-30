@@ -71,6 +71,7 @@
   .stat.komisi { background: linear-gradient(135deg, #11998e, #38ef7d); }
   .stat.ongkir { background: linear-gradient(135deg, #8e54e9, #4776e6); }
   .stat.lembur { background: linear-gradient(135deg, #b24592, #f15f79); }
+  .stat.pokok  { background: linear-gradient(135deg, #3a7bd5, #00d2ff); }
   .stat.spend  { background: linear-gradient(135deg, #457fca, #5691c8); }
   .stat.gaji   { background: linear-gradient(135deg, #f7971e, #ffd200); color: #4a3200; }
 
@@ -99,7 +100,7 @@
 <div class="container">
   <header>
     <h1>Kalkulator Gaji Bulanan Ayang</h1>
-    <p>Komisi dari treatment ➕ ongkos full ➕ lembur (opsional, Rp10.000/lembur) 🐾</p>
+    <p>Gaji pokok ➕ komisi treatment ➕ ongkos full ➕ lembur (opsional) 🐾</p>
   </header>
 
   <!-- ===== PENGATURAN ===== -->
@@ -117,6 +118,10 @@
       <div class="field">
         <label for="jmlHari">Jumlah Hari Kerja</label>
         <input type="number" id="jmlHari" value="30" min="1" max="31">
+      </div>
+      <div class="field">
+        <label for="gajiPokok">Gaji Pokok (Rp / bulan)</label>
+        <input type="number" id="gajiPokok" value="600000" min="0" step="10000">
       </div>
     </div>
   </div>
@@ -145,6 +150,10 @@
   <!-- ===== RINGKASAN ===== -->
   <div class="card">
     <div class="summary">
+      <div class="stat pokok">
+        <div class="label">Gaji Pokok (fix)</div>
+        <div class="value" id="nilaiPokok">Rp 600.000</div>
+      </div>
       <div class="stat spend">
         <div class="label">Total Treatment</div>
         <div class="value" id="totSpend">Rp 0</div>
@@ -180,7 +189,7 @@ const KEY = 'gajiPijatDataV2';
 // ===== DATA DEFAULT =====
 function dataDefault(nHari) {
   return {
-    bulan: '', persen: 30, jmlHari: nHari,
+    bulan: '', persen: 30, jmlHari: nHari, gajiPokok: 600000,
     treatments: [
       { jenis: 'Pijat Tradisional', harga: 50000 },
       { jenis: 'Pijat Aromaterapi', harga: 75000 },
@@ -215,6 +224,7 @@ function render() {
   document.getElementById('bulan').value = data.bulan;
   document.getElementById('persen').value = data.persen;
   document.getElementById('jmlHari').value = data.jmlHari;
+  document.getElementById('gajiPokok').value = (data.gajiPokok === undefined) ? 600000 : data.gajiPokok;
   document.getElementById('lblKomisi').textContent = 'Total Komisi (' + data.persen + '%)';
 
   renderKatalog();
@@ -323,9 +333,10 @@ function hitung() {
   });
   document.getElementById('totSpend').textContent = rupiah(spend);
   document.getElementById('totOngkir').textContent = rupiah(ongkir);
+  document.getElementById('nilaiPokok').textContent = rupiah(num(data.gajiPokok));
   document.getElementById('totLembur').textContent = rupiah(lembur);
   document.getElementById('totKomisi').textContent = rupiah(komisi);
-  document.getElementById('gajiBersih').textContent = rupiah(komisi + ongkir + lembur);
+  document.getElementById('gajiBersih').textContent = rupiah(num(data.gajiPokok) + komisi + ongkir + lembur);
 }
 
 // ===== AKSI =====
@@ -336,6 +347,7 @@ function simpan() {
   data.bulan = document.getElementById('bulan').value;
   data.persen = parseFloat(document.getElementById('persen').value) || 0;
   data.jmlHari = parseInt(document.getElementById('jmlHari').value) || 30;
+  data.gajiPokok = parseFloat(document.getElementById('gajiPokok').value) || 0;
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
@@ -388,6 +400,7 @@ function tambahHari() {
   data.days.push({ tgl: '', lembur: '', customers: [] });
   data.jmlHari = data.days.length;
   document.getElementById('jmlHari').value = data.jmlHari;
+  document.getElementById('gajiPokok').value = (data.gajiPokok === undefined) ? 600000 : data.gajiPokok;
   simpan(); renderHari(); hitung();
 }
 function hapusHari(d) {
@@ -404,7 +417,7 @@ function resetSemua() {
   }
 }
 
-['bulan','persen'].forEach(id => {
+['bulan','persen','gajiPokok'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { simpan(); render(); });
 });
 document.getElementById('jmlHari').addEventListener('change', () => {
