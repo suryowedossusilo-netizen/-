@@ -78,6 +78,9 @@
   .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
   .note { font-size: 0.8rem; color: #888; margin-top: 10px; line-height: 1.6; }
 
+  /* Slip gaji hanya tampil saat print */
+  #slipGaji { display: none; }
+
   #catCanvas { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
   #catToast { position: fixed; top: 14px; right: 14px; z-index: 10000; background: #fff; border-radius: 12px; padding: 10px 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); font-size: 0.8rem; color: #555; max-width: 230px; display: none; }
   #catToast b { color: #764ba2; }
@@ -88,9 +91,21 @@
     td input { padding: 4px; }
   }
   @media print {
-    body { background: #fff; }
-    .actions, .btn-del, #catCanvas, #catToast { display: none; }
-    .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+    body { background: #fff; padding: 0; }
+    header, .card, #catCanvas, #catToast { display: none !important; }
+    #slipGaji { display: block; }
+    .slip-box { max-width: 800px; margin: 0 auto; color: #000; font-size: 12px; }
+    .slip-box h2 { text-align: center; letter-spacing: 3px; margin-bottom: 4px; }
+    .slip-head { text-align: center; margin-bottom: 12px; }
+    .slip-table { width: 100%; border-collapse: collapse; margin: 10px 0 18px; }
+    .slip-table th, .slip-table td { border: 1px solid #333; padding: 5px 8px; text-align: left; font-size: 11px; }
+    .slip-table th { background: #eee !important; color: #000; }
+    .slip-table td:last-child, .slip-table th:last-child { text-align: right; }
+    .slip-table .ctr, .slip-table th.ctr { text-align: center; }
+    .slip-box tfoot td { background: #f0f0f0; font-size: 13px; font-weight: 700; }
+    .slip-box h3 { margin: 8px 0 4px; font-size: 12px; }
+    .slip-ttd { display: flex; justify-content: space-between; margin-top: 48px; text-align: center; }
+    .slip-ttd > div { width: 40%; }
   }
 </style>
 <base target="_blank">
@@ -123,6 +138,10 @@
         <label for="gajiPokok">Gaji Pokok (Rp / bulan)</label>
         <input type="number" id="gajiPokok" value="600000" min="0" step="10000">
       </div>
+      <div class="field">
+        <label for="namaKar">Nama Karyawan (opsional)</label>
+        <input type="text" id="namaKar" placeholder="Nama">
+      </div>
     </div>
   </div>
 
@@ -143,7 +162,7 @@
     <div class="actions">
       <button class="btn btn-add" onclick="tambahHari()">+ Tambah Hari</button>
       <button class="btn btn-reset" onclick="resetSemua()">🗑 Reset Semua</button>
-      <button class="btn btn-reset" onclick="window.print()">🖨 Cetak</button>
+      <button class="btn btn-reset" onclick="window.print()">🖨 Cetak Slip Gaji</button>
     </div>
   </div>
 
@@ -180,6 +199,51 @@
   </div>
 </div>
 
+<!-- ===== SLIP GAJI (khusus cetak) ===== -->
+<div id="slipGaji">
+  <div class="slip-box">
+    <div class="slip-head">
+      <h2>SLIP GAJI</h2>
+      <p>Bulan: <b id="slipBulan">-</b> &nbsp;|&nbsp; Nama: <b id="slipNama">-</b></p>
+    </div>
+    <table class="slip-table">
+      <thead>
+        <tr><th>Keterangan</th><th>Jumlah (Rp)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Gaji Pokok</td><td id="slipPokok">Rp 0</td></tr>
+        <tr><td>Komisi Treatment (30%)</td><td id="slipKomisi">Rp 0</td></tr>
+        <tr><td>Ongkos / Bensin (full)</td><td id="slipOngkir">Rp 0</td></tr>
+        <tr><td>Lembur (<span id="slipLemburN">0</span>x @ Rp10.000)</td><td id="slipLembur">Rp 0</td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td>TOTAL GAJI</td><td id="slipTotal">Rp 0</td></tr>
+      </tfoot>
+    </table>
+    <h3>RINCIAN HARIAN</h3>
+    <table class="slip-table">
+      <thead>
+        <tr>
+          <th class="ctr">No</th><th class="ctr">Tanggal</th><th class="ctr">Pelanggan</th>
+          <th>Treatment</th><th>Komisi</th><th>Ongkir</th><th>Lembur</th>
+        </tr>
+      </thead>
+      <tbody id="slipDetail"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">TOTAL</td>
+          <td id="slipTotTrt">Rp 0</td><td id="slipTotKom">Rp 0</td>
+          <td id="slipTotOng">Rp 0</td><td id="slipTotLem">Rp 0</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="slip-ttd">
+      <div>Penerima,<br><br><br><br>( ____________________ )</div>
+      <div>Hormat Kami,<br><br><br><br>( ____________________ )</div>
+    </div>
+  </div>
+</div>
+
 <canvas id="catCanvas"></canvas>
 <div id="catToast">🐱🍊 <b>Kucing &amp; capybara kamu muncul!</b> Klik di layar — yang terdekat akan lompat.</div>
 
@@ -189,7 +253,7 @@ const KEY = 'gajiPijatDataV2';
 // ===== DATA DEFAULT =====
 function dataDefault(nHari) {
   return {
-    bulan: '', persen: 30, jmlHari: nHari, gajiPokok: 600000,
+    bulan: '', persen: 30, jmlHari: nHari, gajiPokok: 600000, nama: '',
     treatments: [
       { jenis: 'Pijat Tradisional', harga: 50000 },
       { jenis: 'Pijat Aromaterapi', harga: 75000 },
@@ -225,6 +289,7 @@ function render() {
   document.getElementById('persen').value = data.persen;
   document.getElementById('jmlHari').value = data.jmlHari;
   document.getElementById('gajiPokok').value = (data.gajiPokok === undefined) ? 600000 : data.gajiPokok;
+  document.getElementById('namaKar').value = data.nama || '';
   document.getElementById('lblKomisi').textContent = 'Total Komisi (' + data.persen + '%)';
 
   renderKatalog();
@@ -321,6 +386,48 @@ function renderHari() {
   });
 }
 
+function isiSlip() {
+  const bln = data.bulan
+    ? new Date(data.bulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+    : '-';
+  document.getElementById('slipBulan').textContent = bln;
+  document.getElementById('slipNama').textContent = data.nama || '-';
+
+  let komisi = 0, ongkir = 0, lembur = 0, lemburN = 0;
+  let html = '', totTrt = 0;
+  data.days.forEach((day, i) => {
+    let spend = 0, kom = 0, ong = 0;
+    day.customers.forEach(c => {
+      spend += hargaTrt(c);
+      kom += komisiCust(c);
+      ong += num(c.ongkir);
+    });
+    lembur += num(day.lembur) * 10000;
+    lemburN += num(day.lembur);
+    if (!day.customers.length && !num(day.lembur)) return; // lewati hari kosong
+    const tgl = day.tgl
+      ? new Date(day.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'Hari ke-' + (i + 1);
+    html += '<tr><td class="ctr">' + (i + 1) + '</td><td class="ctr">' + tgl + '</td><td class="ctr">' +
+      day.customers.length + '</td><td>' + rupiah(spend) + '</td><td>' + rupiah(kom) + '</td><td>' +
+      rupiah(ong) + '</td><td>' + rupiah(num(day.lembur) * 10000) + '</td></tr>';
+    komisi += kom; ongkir += ong; totTrt += spend;
+  });
+
+  document.getElementById('slipPokok').textContent = rupiah(num(data.gajiPokok));
+  document.getElementById('slipKomisi').textContent = rupiah(komisi);
+  document.getElementById('slipOngkir').textContent = rupiah(ongkir);
+  document.getElementById('slipLembur').textContent = rupiah(lembur);
+  document.getElementById('slipLemburN').textContent = lemburN;
+  document.getElementById('slipTotal').textContent = rupiah(num(data.gajiPokok) + komisi + ongkir + lembur);
+
+  document.getElementById('slipDetail').innerHTML = html || '<tr><td colspan="7" class="ctr">Belum ada data</td></tr>';
+  document.getElementById('slipTotTrt').textContent = rupiah(totTrt);
+  document.getElementById('slipTotKom').textContent = rupiah(komisi);
+  document.getElementById('slipTotOng').textContent = rupiah(ongkir);
+  document.getElementById('slipTotLem').textContent = rupiah(lembur);
+}
+
 function hitung() {
   let komisi = 0, spend = 0, ongkir = 0, lembur = 0;
   data.days.forEach(day => {
@@ -337,6 +444,7 @@ function hitung() {
   document.getElementById('totLembur').textContent = rupiah(lembur);
   document.getElementById('totKomisi').textContent = rupiah(komisi);
   document.getElementById('gajiBersih').textContent = rupiah(num(data.gajiPokok) + komisi + ongkir + lembur);
+  isiSlip();
 }
 
 // ===== AKSI =====
@@ -348,6 +456,7 @@ function simpan() {
   data.persen = parseFloat(document.getElementById('persen').value) || 0;
   data.jmlHari = parseInt(document.getElementById('jmlHari').value) || 30;
   data.gajiPokok = parseFloat(document.getElementById('gajiPokok').value) || 0;
+  data.nama = document.getElementById('namaKar').value;
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
@@ -401,6 +510,7 @@ function tambahHari() {
   data.jmlHari = data.days.length;
   document.getElementById('jmlHari').value = data.jmlHari;
   document.getElementById('gajiPokok').value = (data.gajiPokok === undefined) ? 600000 : data.gajiPokok;
+  document.getElementById('namaKar').value = data.nama || '';
   simpan(); renderHari(); hitung();
 }
 function hapusHari(d) {
@@ -417,7 +527,7 @@ function resetSemua() {
   }
 }
 
-['bulan','persen','gajiPokok'].forEach(id => {
+['bulan','persen','gajiPokok','namaKar'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { simpan(); render(); });
 });
 document.getElementById('jmlHari').addEventListener('change', () => {
