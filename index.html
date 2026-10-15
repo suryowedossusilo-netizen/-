@@ -115,6 +115,9 @@
     .slip-ttd { display: flex; justify-content: space-between; margin-top: 48px; text-align: center; }
     .slip-ttd > div { width: 40%; }
   }
+
+  .report-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:16px}.report-toolbar .field{min-width:190px}.report-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.report-stat{padding:14px;border-radius:12px;background:#f4f6ff;border:1px solid #e1e6ff}.report-stat small{display:block;color:#666;margin-bottom:6px}.report-stat strong{font-size:1.05rem;color:#3746a3;overflow-wrap:anywhere}.report-table-wrap{overflow-x:auto}.report-table{width:100%;border-collapse:collapse;min-width:900px}.report-table th,.report-table td{border:1px solid #e3e5ef;padding:9px 10px;text-align:left;vertical-align:top;font-size:.88rem}.report-table th{background:#eef0ff;color:#353d75}.report-table .daily-total td{background:#f7f7fb;font-weight:700}.report-table .grand-total td{background:#e8f7f1;font-weight:800} .report-empty{padding:20px;text-align:center;color:#777;background:#fafafa;border-radius:10px}
+  @media print { body.print-report header, body.print-report #pageReports, body.print-report #pageReports .card { display:block !important; } body.print-report #slipGaji, body.print-report #pageDashboard, body.print-report #pageTreatments { display:none !important; } body.print-report .report-toolbar { display:none !important; } }
 </style>
 <base target="_blank">
 <base target="_blank">
@@ -130,6 +133,7 @@
   <nav class="main-nav" aria-label="Menu utama">
     <button type="button" id="navDashboard" class="nav-btn active" onclick="bukaMenu('dashboard')">🏠 Dashboard</button>
     <button type="button" id="navTreatments" class="nav-btn" onclick="bukaMenu('treatments')">💆 Daftar Treatment</button>
+    <button type="button" id="navReports" class="nav-btn" onclick="bukaMenu('reports')">📊 Laporan Harian</button>
   </nav>
 
   <section id="pageDashboard" class="page-panel">
@@ -214,6 +218,16 @@
     </div>
     <p class="note">Daftar ini dipakai untuk centang treatment tiap pelanggan. Harga bisa digabung beberapa jenis.</p>
   </div>
+  </section>
+
+  <section id="pageReports" class="page-panel" hidden>
+    <div class="card">
+      <h2>📊 Laporan Harian Terperinci</h2>
+      <p class="note">Rekap otomatis dari data pelanggan dan hari kerja yang tersimpan di browser ini.</p>
+      <div class="report-toolbar"><div class="field"><label for="filterLaporanBulan">Filter Bulan</label><input type="month" id="filterLaporanBulan" onchange="renderLaporan()"></div><button class="btn btn-add" onclick="renderLaporan()">🔄 Perbarui Laporan</button><button class="btn btn-add" onclick="exportLaporanCSV()">⬇️ Ekspor CSV</button><button class="btn btn-reset" onclick="cetakLaporan()">🖨 Cetak Laporan</button></div>
+      <div id="ringkasanLaporan" class="report-stats"></div><div id="isiLaporan"></div>
+      <p class="note">Komisi mengikuti persentase pada Pengaturan. Ongkos ditampilkan sesuai input. Lembur dihitung Rp10.000 per jumlah lembur.</p>
+    </div>
   </section>
 </div>
 
@@ -349,14 +363,61 @@ function komisiCust(cust) {
 function bukaMenu(menu) {
   const dashboard = document.getElementById('pageDashboard');
   const treatments = document.getElementById('pageTreatments');
+  const reports = document.getElementById('pageReports');
   const navDashboard = document.getElementById('navDashboard');
   const navTreatments = document.getElementById('navTreatments');
-
+  const navReports = document.getElementById('navReports');
   dashboard.hidden = menu !== 'dashboard';
   treatments.hidden = menu !== 'treatments';
+  reports.hidden = menu !== 'reports';
   navDashboard.classList.toggle('active', menu === 'dashboard');
   navTreatments.classList.toggle('active', menu === 'treatments');
+  navReports.classList.toggle('active', menu === 'reports');
+  if (menu === 'reports') renderLaporan();
 }
+
+
+function dataLaporan() {
+  const filter = document.getElementById('filterLaporanBulan')?.value || '';
+  const rows = [];
+  data.days.forEach(day => {
+    const date = day.tgl || '';
+    if (filter && (!date || date.slice(0,7) !== filter)) return;
+    const customers = (day.customers || []).map(c => ({
+      nama:c.nama || '(Nama belum diisi)',
+      treatments:(c.trts || []).map(i => data.treatments[i]?.jenis || '').filter(Boolean),
+      treatmentTotal:hargaTrt(c), commission:komisiCust(c), distance:num(c.jarak), transport:num(c.ongkir)
+    }));
+    rows.push({date,customers,treatmentTotal:customers.reduce((s,c)=>s+c.treatmentTotal,0),commission:customers.reduce((s,c)=>s+c.commission,0),transport:customers.reduce((s,c)=>s+c.transport,0),overtime:num(day.lembur)*10000,count:customers.length});
+  });
+  return rows;
+}
+function renderLaporan() {
+  const summary=document.getElementById('ringkasanLaporan'), container=document.getElementById('isiLaporan');
+  if(!summary||!container)return;
+  const rows=dataLaporan();
+  const totals=rows.reduce((s,r)=>({customers:s.customers+r.count,treatment:s.treatment+r.treatmentTotal,commission:s.commission+r.commission,transport:s.transport+r.transport,overtime:s.overtime+r.overtime,days:s.days+((r.date||r.count||r.overtime)?1:0)}),{customers:0,treatment:0,commission:0,transport:0,overtime:0,days:0});
+  const salary=num(data.gajiPokok)+totals.commission+totals.transport+totals.overtime;
+  const cards=[['Hari tercatat',totals.days],['Total pelanggan',totals.customers],['Nilai treatment',rupiah(totals.treatment)],['Total komisi',rupiah(totals.commission)],['Total ongkos',rupiah(totals.transport)],['Total lembur',rupiah(totals.overtime)],['Gaji pokok',rupiah(num(data.gajiPokok))],['Estimasi total gaji',rupiah(salary)]];
+  summary.innerHTML=cards.map(([k,v])=>'<div class="report-stat"><small>'+escapeHtml(k)+'</small><strong>'+escapeHtml(String(v))+'</strong></div>').join('');
+  if(!rows.length){container.innerHTML='<div class="report-empty">Tidak ada data pada bulan yang dipilih.</div>';return;}
+  let html='<div class="report-table-wrap"><table class="report-table"><thead><tr><th>Tanggal</th><th>Nama pelanggan</th><th>Detail treatment</th><th>Nilai treatment</th><th>Komisi</th><th>Jarak (km)</th><th>Ongkos</th><th>Lembur</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    if(!r.customers.length) html+='<tr><td>'+escapeHtml(r.date||'Tanggal belum diisi')+'</td><td colspan="6">Belum ada pelanggan</td><td>'+rupiah(r.overtime)+'</td></tr>';
+    r.customers.forEach((c,i)=>{html+='<tr><td>'+(i===0?escapeHtml(r.date||'Tanggal belum diisi'):'')+'</td><td>'+escapeHtml(c.nama)+'</td><td>'+escapeHtml(c.treatments.join(', ')||'Belum memilih treatment')+'</td><td>'+rupiah(c.treatmentTotal)+'</td><td>'+rupiah(c.commission)+'</td><td>'+c.distance+'</td><td>'+rupiah(c.transport)+'</td><td>'+(i===0?rupiah(r.overtime):'—')+'</td></tr>';});
+    if(r.customers.length)html+='<tr class="daily-total"><td colspan="3">Subtotal '+escapeHtml(r.date||'tanggal belum diisi')+' ('+r.count+' pelanggan)</td><td>'+rupiah(r.treatmentTotal)+'</td><td>'+rupiah(r.commission)+'</td><td>—</td><td>'+rupiah(r.transport)+'</td><td>'+rupiah(r.overtime)+'</td></tr>';
+  });
+  html+='<tr class="grand-total"><td colspan="3">TOTAL PERIODE</td><td>'+rupiah(totals.treatment)+'</td><td>'+rupiah(totals.commission)+'</td><td>—</td><td>'+rupiah(totals.transport)+'</td><td>'+rupiah(totals.overtime)+'</td></tr></tbody></table></div><p class="note">Estimasi gaji = gaji pokok + komisi + ongkos + lembur. Nilai treatment bukan tambahan gaji terpisah.</p>';
+  container.innerHTML=html;
+}
+function exportLaporanCSV() {
+  const rows=dataLaporan(), out=[['Tanggal','Nama Pelanggan','Treatment','Nilai Treatment','Komisi','Jarak (km)','Ongkos (Rp)','Lembur (Rp)']];
+  rows.forEach(r=>{if(!r.customers.length)out.push([r.date||'Tanggal belum diisi','','',0,0,0,0,r.overtime]);r.customers.forEach((c,i)=>out.push([r.date||'Tanggal belum diisi',c.nama,c.treatments.join('; '),c.treatmentTotal,c.commission,c.distance,c.transport,i===0?r.overtime:0]));});
+  const csv='\uFEFF'+out.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})),a=document.createElement('a');
+  a.href=url;a.download='laporan-harian-'+(document.getElementById('filterLaporanBulan').value||'semua-periode')+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+function cetakLaporan(){bukaMenu('reports');document.body.classList.add('print-report');window.print();document.body.classList.remove('print-report');}
 
 // ===== RENDER =====
 function render() {
@@ -370,6 +431,7 @@ function render() {
   renderKatalog();
   renderHari();
   hitung();
+  renderLaporan();
 }
 
 function renderKatalog() {
@@ -520,6 +582,7 @@ function hitung() {
   document.getElementById('totKomisi').textContent = rupiah(komisi);
   document.getElementById('gajiBersih').textContent = rupiah(num(data.gajiPokok) + komisi + ongkir + lembur);
   isiSlip();
+  renderLaporan();
 }
 
 // ===== AKSI =====
