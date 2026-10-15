@@ -45,6 +45,9 @@
   .trt-item input { flex: 1; min-width: 130px; }
   .trt-item .harga { max-width: 140px; }
 
+  .date-entry { display:flex; align-items:end; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .date-entry .field { min-width:180px; flex:1; }
+  .date-entry .btn { min-height:42px; }
   /* ===== KARTU HARI ===== */
   .day-card { border: 2px solid #e8e8f5; border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
   .day-head { display: flex; align-items: center; gap: 10px; background: #f5f7ff; padding: 10px 14px; flex-wrap: wrap; }
@@ -169,7 +172,7 @@
     <h2>📅 Data Harian (bisa lebih dari 1 pelanggan per hari)</h2>
     <div id="daftarHari"></div>
     <div class="actions">
-      <button class="btn btn-add" onclick="tambahHari()">+ Tambah Hari</button>
+      <button class="btn btn-add" onclick="tambahHari()">＋ Tambah Tanggal</button>
       <button class="btn btn-reset" onclick="resetSemua()">🗑 Reset Semua</button>
       <button class="btn btn-reset" onclick="window.print()">🖨 Cetak Slip Gaji</button>
     </div>
@@ -320,7 +323,7 @@ function dataDefault(nHari) {
   { jenis: 'Foot Refleksi (120 Minutes)', harga: 125000 },
   { jenis: 'Foot Refleksi (150 Minutes)', harga: 155000 }
     ],
-    days: Array.from({length: nHari}, () => ({ tgl: '', lembur: '', customers: [] }))
+    days: []
   };
 }
 function pelangganBaru() {
@@ -450,81 +453,92 @@ function renderKatalog() {
   });
 }
 
-function renderHari() {
-  const el = document.getElementById('daftarHari');
-  el.innerHTML = '';
-  data.days.forEach((day, d) => {
-    const card = document.createElement('div');
-    card.className = 'day-card';
+let selectedDayIndex = -1;
 
-    const nCust = day.customers.length;
-    let totTrt = 0, totKom = 0, totOng = 0;
-    day.customers.forEach(c => { totTrt += hargaTrt(c); totKom += komisiCust(c); totOng += num(c.ongkir); });
-
-    let rows = '';
-    day.customers.forEach((c, i) => {
-      const hTrt = hargaTrt(c);
-      const dipilih = c.trts.map(t => data.treatments[t] ? data.treatments[t].jenis : '').filter(Boolean);
-      let menu = '';
-      data.treatments.forEach((t, ti) => {
-        const cek = c.trts.includes(ti) ? 'checked' : '';
-        menu += `<label><input type="checkbox" ${cek} onchange="toggleTrt(${d},${i},${ti},this.checked)"> ${escapeHtml(t.jenis)} <span class="harga-mini">${rupiah(t.harga)}</span></label>`;
-      });
-      if (!data.treatments.length) menu = '<label style="color:#999">Belum ada treatment — tambahkan di daftar atas.</label>';
-
-      rows += `
-        <tr>
-          <td><input type="text" class="txt" placeholder="Nama" value="${escapeHtml(c.nama)}" onchange="ubahCust(${d},${i},'nama',this.value)"></td>
-          <td><input type="number" min="0" step="0.1" placeholder="km" value="${c.jarak}" onchange="ubahCust(${d},${i},'jarak',this.value)"></td>
-          <td><input type="number" min="0" placeholder="Rp" value="${c.ongkir}" onchange="ubahCust(${d},${i},'ongkir',this.value)"></td>
-          <td>
-            <details class="trt-pick">
-              <summary>🧾 Pilih Treatment</summary>
-              <div class="trt-menu">${menu}</div>
-            </details>
-            <div class="trt-picked">${dipilih.length ? '✔ ' + dipilih.map(escapeHtml).join(', ') : '— belum dipilih —'}</div>
-          </td>
-          <td class="num">${rupiah(hTrt)}</td>
-          <td class="num">${rupiah(komisiCust(c))}</td>
-          <td><button class="btn btn-del" onclick="hapusCust(${d},${i})">✕</button></td>
-        </tr>`;
-    });
-
-    card.innerHTML = `
-      <div class="day-head">
-        <b>📅 <input type="date" value="${day.tgl || ''}" onchange="ubahTgl(${d},this.value)" style="width:auto;padding:4px 8px;font-size:0.85rem"></b>
-        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;color:#555;margin:0;cursor:pointer">🌙 Lembur
-          <input type="number" min="0" placeholder="0" value="${day.lembur || ''}" onchange="ubahLembur(${d},this.value)" style="width:64px;padding:4px 6px;font-size:0.85rem;text-align:right">
-          <span style="color:#999;font-weight:500">x Rp10.000</span>
-        </label>
-        ${num(day.lembur) > 0 ? `<span class="day-badge" style="background:#b24592">Lembur ${rupiah(num(day.lembur) * 10000)}</span>` : ''}
-        <span class="day-badge">${nCust} pelanggan</span>
-        <span class="day-badge" style="background:#11998e">Komisi ${rupiah(totKom)}</span>
-        <span class="spacer"></span>
-        <button class="btn btn-add btn-sm" onclick="tambahCust(${d})">+ Pelanggan</button>
-        <button class="btn btn-del" onclick="hapusHari(${d})">✕ Hapus Hari</button>
-      </div>
-      <div class="day-body">
-        ${nCust ? `
-        <table>
-          <thead>
-            <tr>
-              <th>Nama Pelanggan</th>
-              <th>Jarak (km)</th>
-              <th>Ongkir (Rp)</th>
-              <th>Treatment</th>
-              <th>Harga Trt</th>
-              <th>Komisi</th>
-              <th>Hapus</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>` : `<p class="note" style="margin:4px 0">Belum ada pelanggan — klik <b>+ Pelanggan</b> untuk menambah.</p>`}
-      </div>`;
-    el.appendChild(card);
-  });
+function tanggalHariIni() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
 }
 
+function renderHari() {
+  const el = document.getElementById('daftarHari');
+  const availableDays = data.days
+    .map((day, index) => ({ day, index }))
+    .filter(item => item.day.tgl || item.day.customers.length || num(item.day.lembur) > 0);
+
+  if (selectedDayIndex < 0 || !data.days[selectedDayIndex] ||
+      !availableDays.some(item => item.index === selectedDayIndex)) {
+    selectedDayIndex = availableDays.length ? availableDays[availableDays.length - 1].index : -1;
+  }
+
+  const options = availableDays.map(item => {
+    const label = item.day.tgl
+      ? new Date(item.day.tgl + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'Tanggal belum diisi';
+    return '<option value="' + item.index + '"' + (item.index === selectedDayIndex ? ' selected' : '') + '>' +
+      escapeHtml(label + ' — ' + item.day.customers.length + ' customer') + '</option>';
+  }).join('');
+
+  let html = '<div class="date-entry">' +
+    '<div class="field"><label for="inputTanggalBaru">Tambah / pilih tanggal</label><input type="date" id="inputTanggalBaru" value="' + (selectedDayIndex >= 0 ? (data.days[selectedDayIndex].tgl || tanggalHariIni()) : tanggalHariIni()) + '"></div>' +
+    '<button type="button" class="btn btn-add" onclick="tambahHari()">＋ Buka Tanggal</button>' +
+    (availableDays.length ? '<div class="field"><label for="pilihTanggal">Tanggal tersimpan</label><select id="pilihTanggal" onchange="pilihHari(this.value)">' + options + '</select></div>' : '') +
+    '</div>';
+
+  if (selectedDayIndex < 0 || !data.days[selectedDayIndex]) {
+    el.innerHTML = html + '<div class="report-empty">Belum ada tanggal yang dicatat. Pilih tanggal di atas, lalu tekan <b>Buka Tanggal</b> untuk mulai memasukkan customer.</div>';
+    return;
+  }
+
+  const d = selectedDayIndex;
+  const day = data.days[d];
+  const nCust = day.customers.length;
+  let totKom = 0;
+  day.customers.forEach(c => { totKom += komisiCust(c); });
+
+  let rows = '';
+  day.customers.forEach((c, i) => {
+    const hTrt = hargaTrt(c);
+    const dipilih = c.trts.map(t => data.treatments[t] ? data.treatments[t].jenis : '').filter(Boolean);
+    let menu = '';
+    data.treatments.forEach((t, ti) => {
+      const cek = c.trts.includes(ti) ? 'checked' : '';
+      menu += '<label><input type="checkbox" ' + cek + ' onchange="toggleTrt(' + d + ',' + i + ',' + ti + ',this.checked)"> ' + escapeHtml(t.jenis) + ' <span class="harga-mini">' + rupiah(t.harga) + '</span></label>';
+    });
+    if (!data.treatments.length) menu = '<label style="color:#999">Belum ada treatment — tambahkan di Daftar Treatment.</label>';
+
+    rows += '<tr>' +
+      '<td><input type="text" class="txt" placeholder="Nama customer" value="' + escapeHtml(c.nama) + '" onchange="ubahCust(' + d + ',' + i + ',\'nama\',this.value)"></td>' +
+      '<td><input type="number" min="0" step="0.1" placeholder="km" value="' + c.jarak + '" onchange="ubahCust(' + d + ',' + i + ',\'jarak\',this.value)"></td>' +
+      '<td><input type="number" min="0" placeholder="Rp" value="' + c.ongkir + '" onchange="ubahCust(' + d + ',' + i + ',\'ongkir\',this.value)"></td>' +
+      '<td><details class="trt-pick"><summary>🧾 Pilih Treatment</summary><div class="trt-menu">' + menu + '</div></details>' +
+      '<div class="trt-picked">' + (dipilih.length ? '✔ ' + dipilih.map(escapeHtml).join(', ') : '— belum dipilih —') + '</div></td>' +
+      '<td class="num">' + rupiah(hTrt) + '</td><td class="num">' + rupiah(komisiCust(c)) + '</td>' +
+      '<td><button class="btn btn-del" onclick="hapusCust(' + d + ',' + i + ')">✕</button></td></tr>';
+  });
+
+  const dateLabel = day.tgl
+    ? new Date(day.tgl + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : 'Tanggal belum diisi';
+  html += '<div class="day-card"><div class="day-head"><b>📅 ' + escapeHtml(dateLabel) + '</b>' +
+    '<label style="display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:#555;margin:0">🌙 Lembur ' +
+    '<input type="number" min="0" placeholder="0" value="' + (day.lembur || '') + '" onchange="ubahLembur(' + d + ',this.value)" style="width:64px;padding:4px 6px;font-size:.85rem;text-align:right">' +
+    '<span style="color:#999;font-weight:500">x Rp10.000</span></label>' +
+    (num(day.lembur) > 0 ? '<span class="day-badge" style="background:#b24592">Lembur ' + rupiah(num(day.lembur) * 10000) + '</span>' : '') +
+    '<span class="day-badge">' + nCust + ' customer</span><span class="day-badge" style="background:#11998e">Komisi ' + rupiah(totKom) + '</span><span class="spacer"></span>' +
+    '<button class="btn btn-add btn-sm" onclick="tambahCust(' + d + ')">＋ Tambah Customer</button>' +
+    '<button class="btn btn-del" onclick="hapusHari(' + d + ')">Hapus Tanggal</button></div><div class="day-body">' +
+    (nCust ? '<table><thead><tr><th>Nama Customer</th><th>Jarak (km)</th><th>Uang Bensin / Transport (Rp)</th><th>Treatment</th><th>Harga Treatment</th><th>Komisi</th><th>Hapus</th></tr></thead><tbody>' + rows + '</tbody></table>' :
+    '<p class="note" style="margin:4px 0">Belum ada customer untuk tanggal ini. Tekan <b>＋ Tambah Customer</b> untuk mulai mencatat.</p>') +
+    '</div></div>';
+  el.innerHTML = html;
+}
+
+function pilihHari(index) {
+  selectedDayIndex = Number(index);
+  renderHari();
+}
 function isiSlip() {
   const bln = data.bulan
     ? new Date(data.bulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
@@ -646,11 +660,21 @@ function hapusCust(d, i) {
   simpan(); renderHari(); hitung();
 }
 function tambahHari() {
-  data.days.push({ tgl: '', lembur: '', customers: [] });
-  data.jmlHari = data.days.length;
-  document.getElementById('jmlHari').value = data.jmlHari;
-  document.getElementById('gajiPokok').value = (data.gajiPokok === undefined) ? 600000 : data.gajiPokok;
-  document.getElementById('namaKar').value = data.nama || '';
+  const input = document.getElementById('inputTanggalBaru');
+  const tgl = input && input.value ? input.value : tanggalHariIni();
+  const existing = data.days.findIndex(day => day.tgl === tgl);
+  if (existing >= 0) {
+    selectedDayIndex = existing;
+  } else {
+    const emptyIndex = data.days.findIndex(day => !day.tgl && !day.customers.length && !num(day.lembur));
+    if (emptyIndex >= 0) {
+      data.days[emptyIndex].tgl = tgl;
+      selectedDayIndex = emptyIndex;
+    } else {
+      data.days.push({ tgl, lembur: '', customers: [] });
+      selectedDayIndex = data.days.length - 1;
+    }
+  }
   simpan(); renderHari(); hitung();
 }
 function hapusHari(d) {
@@ -691,10 +715,7 @@ function resetSemua() {
   document.getElementById(id).addEventListener('change', () => { simpan(); render(); });
 });
 document.getElementById('jmlHari').addEventListener('change', () => {
-  const n = Math.min(31, Math.max(1, parseInt(document.getElementById('jmlHari').value) || 30));
-  while (data.days.length < n) data.days.push({ tgl: '', lembur: '', customers: [] });
-  data.days.length = n;
-  data.jmlHari = n;
+  data.jmlHari = Math.min(31, Math.max(1, parseInt(document.getElementById('jmlHari').value) || 30));
   simpan(); render();
 });
 
