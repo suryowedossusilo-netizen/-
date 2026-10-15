@@ -335,6 +335,8 @@ const namaTreatmentAda = new Set(
   data.treatments.map(t => String(t.jenis).trim().toLowerCase())
 );
 let treatmentBaruDitambahkan = false;
+// Daftar tambahan opsional; array kosong agar aplikasi tetap berjalan jika tidak ada tambahan.
+const treatmentTambahan = [];
 treatmentTambahan.forEach(treatment => {
   const nama = treatment.jenis.trim().toLowerCase();
   if (!namaTreatmentAda.has(nama)) {
