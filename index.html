@@ -520,12 +520,32 @@ function hapusHari(d) {
     simpan(); render();
   }
 }
+
 function resetSemua() {
-  if (confirm('Yakin mau hapus SEMUA data?')) {
-    data = dataDefault(parseInt(document.getElementById('jmlHari').value) || 30);
-    simpan(); render();
+  if (confirm(
+    'Yakin ingin menghapus seluruh data pelanggan dan riwayat transaksi? ' +
+    'Daftar Treatment, harga, dan pengaturan gaji akan tetap dipertahankan.'
+  )) {
+    // Kosongkan data pelanggan dan riwayat harian.
+    const jumlahHari = Math.min(
+      31,
+      Math.max(1, parseInt(document.getElementById('jmlHari').value) || 30)
+    );
+
+    data.days = Array.from({ length: jumlahHari }, () => ({
+      tgl: '',
+      lembur: '',
+      customers: []
+    }));
+
+    // Pertahankan data.treatments dan pengaturan lainnya.
+    data.jmlHari = jumlahHari;
+
+    simpan();
+    render();
   }
 }
+
 
 ['bulan','persen','gajiPokok','namaKar'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { simpan(); render(); });
