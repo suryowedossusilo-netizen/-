@@ -272,6 +272,130 @@ if (!data || !data.days || !data.treatments) {
   data = dataDefault(30);
 }
 
+/* ===== KATALOG TREATMENT TAMBAHAN =====
+   Tambahkan berdasarkan nama. Treatment lama dan harga tersimpan tidak ditimpa.
+*/
+const treatmentTambahan = [
+  { jenis: 'Facial Detox', harga: 100000 },
+  { jenis: 'DC Eye Treatment', harga: 100000 },
+  { jenis: 'Facial Nuskin', harga: 190000 },
+  { jenis: 'Facial RF', harga: 135000 },
+  { jenis: '1X IPL Treatment', harga: 130000 },
+  { jenis: '1X IPL + Brightening', harga: 150000 },
+  { jenis: 'Langset Treatment (Paket 1X)', harga: 299000 },
+  { jenis: 'Langset Treatment (Paket 3X)', harga: 845000 },
+  { jenis: 'Ultimate Bride Care', harga: 498000 },
+  { jenis: 'Exclusive Bride Care', harga: 718000 },
+  { jenis: 'Ultimate Groom Care', harga: 228000 },
+  { jenis: 'Ultimate Package (150 mins)', harga: 190000 },
+  { jenis: 'Luxury II Package (150 mins)', harga: 350000 },
+  { jenis: 'Luxury Slim+ Treatment Package (2,5 jam)', harga: 290000 },
+  { jenis: 'Classy 1 Treatment Package (2,5 jam)', harga: 165000 },
+  { jenis: 'Classy 2 Treatment Package (2,5 jam)', harga: 175000 },
+  { jenis: 'Luxury 1 Treatment Package (2,5 jam)', harga: 290000 },
+  { jenis: 'Massage Payudara (25 mnt)', harga: 60000 },
+  { jenis: 'Kerokan (30 mnt)', harga: 40000 },
+  { jenis: 'Totok Wajah (25 mnt)', harga: 35000 },
+  { jenis: 'Massage Perut (25 mnt)', harga: 60000 },
+  { jenis: 'Eyemask (5 mnt)', harga: 10000 },
+  { jenis: 'Lipmask (5 mnt)', harga: 10000 },
+  { jenis: 'Ear Candle (10 mnt)', harga: 20000 },
+  { jenis: 'Sheetmask (5 mnt)', harga: 15000 },
+  { jenis: 'Snow White Body Bleach DNA Salmon Hand (40 mnt)', harga: 100000 },
+  { jenis: 'Snow White Body Bleach DNA Salmon Foot (40 mnt)', harga: 150000 },
+  { jenis: 'Glow Up Body Scrub (30 mnt)', harga: 60000 },
+  { jenis: 'Glow Up Body Scrub (60 mnt)', harga: 90000 },
+  { jenis: 'Peel of Mask (15 mnt)', harga: 15000 },
+  { jenis: 'Pijat Anak 1 - 5 Tahun (30 Minutes)', harga: 30000 },
+  { jenis: 'Pijat Anak 1 - 5 Tahun (45 Minutes)', harga: 40000 },
+  { jenis: 'Pijat Anak 1 - 5 Tahun (60 Minutes)', harga: 60000 },
+  { jenis: 'Pijat Anak 6 - 9 Tahun (30 Minutes)', harga: 40000 },
+  { jenis: 'Pijat Anak 6 - 9 Tahun (45 Minutes)', harga: 60000 },
+  { jenis: 'Pijat Anak 6 - 9 Tahun (60 Minutes)', harga: 70000 },
+  { jenis: 'Pijat Anak 6 - 9 Tahun (90 Minutes)', harga: 100000 },
+  { jenis: 'Pijat Ibu Hamil (90 Minutes)', harga: 120000 },
+  { jenis: 'Pijat Ibu Hamil (120 Minutes)', harga: 140000 },
+  { jenis: 'Pijat Ibu Hamil (150 Minutes)', harga: 170000 },
+  { jenis: 'Massage Nifas (90 Minutes)', harga: 115000 },
+  { jenis: 'Massage Nifas (120 Minutes)', harga: 135000 },
+  { jenis: 'Massage Oksitosin (90 Minutes)', harga: 130000 },
+  { jenis: 'Massage Oksitosin (120 Minutes)', harga: 145000 },
+  { jenis: 'Massage Prenatal (90 Minutes)', harga: 115000 },
+  { jenis: 'Massage Prenatal (120 Minutes)', harga: 135000 },
+  { jenis: 'Pijat Ibu Hamil + Totok Wajah + Body Scrub (150 Menit)', harga: 190000 },
+  { jenis: 'Menicure', harga: 120000 },
+  { jenis: 'Pedicure', harga: 130000 },
+  { jenis: 'Nail Gel Halal', harga: 170000 },
+  { jenis: 'Remove Gel', harga: 55000 },
+  { jenis: 'Remove Gel Ext', harga: 140000 },
+  { jenis: 'Fake Nail', harga: 170000 },
+  { jenis: 'Nail Ext + Gel', harga: 220000 },
+  { jenis: 'Last Lift', harga: 170000 },
+  { jenis: 'Last Filler', harga: 270000 },
+  { jenis: 'Brow Boomber', harga: 270000 },
+  { jenis: 'Mink Lash Single', harga: 150000 },
+  { jenis: 'Mink Lash Double', harga: 160000 },
+  { jenis: 'Prem Lash Single', harga: 170000 },
+  { jenis: 'Prem Lash Double', harga: 190000 },
+  { jenis: 'Russian Single', harga: 180000 },
+  { jenis: 'Russian Double', harga: 200000 },
+  { jenis: 'Manga Lash Single', harga: 220000 },
+  { jenis: 'Hair Mask Nourishing Reguler', harga: 75000 },
+  { jenis: "Hair mask Premium By Lore'al", harga: 175000 },
+  { jenis: 'Creambath Nourishing', harga: 85000 },
+  { jenis: "Creambath Lore'al", harga: 100000 },
+  { jenis: 'Hair Spa Luminous', harga: 120000 },
+  { jenis: "Hair Spa Lore'al", harga: 135000 },
+  { jenis: 'Scrub Ketombe By Lador', harga: 80000 },
+  { jenis: "Scrub Ketombe By Lore'al", harga: 90000 },
+  { jenis: 'Natural Blow/Hair Straight', harga: 80000 },
+  { jenis: 'Styling Blow/Hair Curly', harga: 90000 },
+  { jenis: 'Body Massage (90 Minutes)', harga: 100000 },
+  { jenis: 'Body Massage (120 Minutes)', harga: 120000 },
+  { jenis: 'Body Massage (150 Minutes)', harga: 150000 },
+  { jenis: 'Body Massage + Totok Wajah + Sheet Mask (90 Minutes)', harga: 120000 },
+  { jenis: 'Body Massage + Totok Wajah + Sheet Mask (120 Minutes)', harga: 135000 },
+  { jenis: 'Body Massage + Totok Wajah + Sheet Mask (150 Minutes)', harga: 160000 },
+  { jenis: 'Body Massage + Head Massage (90 Minutes)', harga: 140000 },
+  { jenis: 'Body Massage + Head Massage (120 Minutes)', harga: 155000 },
+  { jenis: 'Body Massage + Head Massage (150 Minutes)', harga: 170000 },
+  { jenis: 'Body Massage + Glow Up Body Scrub (90 Minutes)', harga: 120000 },
+  { jenis: 'Body Massage + Glow Up Body Scrub (120 Minutes)', harga: 135000 },
+  { jenis: 'Body Massage + Glow Up Body Scrub (150 Minutes)', harga: 160000 },
+  { jenis: 'Light Massage (90 Minutes)', harga: 100000 },
+  { jenis: 'Light Massage (120 Minutes)', harga: 120000 },
+  { jenis: 'Light Massage (150 Minutes)', harga: 150000 },
+  { jenis: 'Thai Massage (90 Minutes)', harga: 110000 },
+  { jenis: 'Thai Massage (120 Minutes)', harga: 125000 },
+  { jenis: 'Thai Massage (150 Minutes)', harga: 155000 },
+  { jenis: 'Body Massage + Pijat Perut (90 Minutes)', harga: 130000 },
+  { jenis: 'Body Massage + Pijat Perut (120 Minutes)', harga: 150000 },
+  { jenis: 'Body Massage + Foot Refleksi (90 Minutes)', harga: 130000 },
+  { jenis: 'Body Massage + Foot Refleksi (120 Minutes)', harga: 145000 },
+  { jenis: 'Body Massage + Kerokan + Oil Massage (90 Minutes)', harga: 110000 },
+  { jenis: 'Body Massage + Kerokan + Oil Massage (120 Minutes)', harga: 125000 },
+  { jenis: 'Body Massage + Kerokan + Oil Massage (150 Minutes)', harga: 155000 },
+  { jenis: 'Foot Refleksi (90 Minutes)', harga: 110000 },
+  { jenis: 'Foot Refleksi (120 Minutes)', harga: 125000 },
+  { jenis: 'Foot Refleksi (150 Minutes)', harga: 155000 }
+];
+const namaTreatmentAda = new Set(
+  data.treatments.map(t => String(t.jenis).trim().toLowerCase())
+);
+let treatmentBaruDitambahkan = false;
+treatmentTambahan.forEach(treatment => {
+  const nama = treatment.jenis.trim().toLowerCase();
+  if (!namaTreatmentAda.has(nama)) {
+    data.treatments.push(treatment);
+    namaTreatmentAda.add(nama);
+    treatmentBaruDitambahkan = true;
+  }
+});
+if (treatmentBaruDitambahkan) {
+  localStorage.setItem(KEY, JSON.stringify(data));
+}
+
+
 const rupiah = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 const num = v => parseFloat(v) || 0;
 
