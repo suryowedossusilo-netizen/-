@@ -78,6 +78,13 @@
   .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
   .note { font-size: 0.8rem; color: #888; margin-top: 10px; line-height: 1.6; }
 
+  /* ===== NAVIGASI MENU ===== */
+  .main-nav { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 auto 20px; }
+  .nav-btn { border: 1px solid rgba(255,255,255,0.55); border-radius: 10px; padding: 11px 18px; color: #fff; background: rgba(255,255,255,0.14); font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
+  .nav-btn:hover { background: rgba(255,255,255,0.25); }
+  .nav-btn.active { background: #fff; color: #5568d3; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .page-panel[hidden] { display: none !important; }
+
   /* Slip gaji hanya tampil saat print */
   #slipGaji { display: none; }
 
@@ -92,6 +99,7 @@
   }
   @media print {
     body { background: #fff; padding: 0; }
+    .main-nav { display: none !important; }
     header, .card, #catCanvas, #catToast { display: none !important; }
     #slipGaji { display: block; }
     .slip-box { max-width: 800px; margin: 0 auto; color: #000; font-size: 12px; }
@@ -118,6 +126,13 @@
     <p>Gaji pokok ➕ komisi treatment ➕ ongkos full ➕ lembur (opsional) 🐾</p>
   </header>
 
+  <!-- ===== NAVIGASI MENU ===== -->
+  <nav class="main-nav" aria-label="Menu utama">
+    <button type="button" id="navDashboard" class="nav-btn active" onclick="bukaMenu('dashboard')">🏠 Dashboard</button>
+    <button type="button" id="navTreatments" class="nav-btn" onclick="bukaMenu('treatments')">💆 Daftar Treatment</button>
+  </nav>
+
+  <section id="pageDashboard" class="page-panel">
   <!-- ===== PENGATURAN ===== -->
   <div class="card">
     <h2>⚙️ Pengaturan</h2>
@@ -143,16 +158,6 @@
         <input type="text" id="namaKar" placeholder="Nama">
       </div>
     </div>
-  </div>
-
-  <!-- ===== KATALOG TREATMENT ===== -->
-  <div class="card">
-    <h2>💆 Daftar Treatment &amp; Harga</h2>
-    <div id="katalog"></div>
-    <div class="actions">
-      <button class="btn btn-add btn-sm" onclick="tambahTreatment()">+ Tambah Jenis Treatment</button>
-    </div>
-    <p class="note">Daftar ini dipakai untuk centang treatment tiap pelanggan. Harga bisa digabung beberapa jenis.</p>
   </div>
 
   <!-- ===== DATA HARIAN ===== -->
@@ -197,6 +202,19 @@
     <p class="note">💾 Data tersimpan otomatis di browser ini.<br>
     🐱 <b>Tips:</b> klik di layar (kucing terdekat melompat &amp; meong), sentuh kucing dengan kursor (dia senang 💗).</p>
   </div>
+  </section>
+
+  <section id="pageTreatments" class="page-panel" hidden>
+  <!-- ===== KATALOG TREATMENT ===== -->
+  <div class="card">
+    <h2>💆 Daftar Treatment &amp; Harga</h2>
+    <div id="katalog"></div>
+    <div class="actions">
+      <button class="btn btn-add btn-sm" onclick="tambahTreatment()">+ Tambah Jenis Treatment</button>
+    </div>
+    <p class="note">Daftar ini dipakai untuk centang treatment tiap pelanggan. Harga bisa digabung beberapa jenis.</p>
+  </div>
+  </section>
 </div>
 
 <!-- ===== SLIP GAJI (khusus cetak) ===== -->
@@ -407,6 +425,19 @@ function komisiCust(cust) {
   // komisi hanya dari harga treatment — ongkir diterima full tanpa persenan
   return hargaTrt(cust) * num(data.persen) / 100;
 }
+// ===== NAVIGASI MENU =====
+function bukaMenu(menu) {
+  const dashboard = document.getElementById('pageDashboard');
+  const treatments = document.getElementById('pageTreatments');
+  const navDashboard = document.getElementById('navDashboard');
+  const navTreatments = document.getElementById('navTreatments');
+
+  dashboard.hidden = menu !== 'dashboard';
+  treatments.hidden = menu !== 'treatments';
+  navDashboard.classList.toggle('active', menu === 'dashboard');
+  navTreatments.classList.toggle('active', menu === 'treatments');
+}
+
 // ===== RENDER =====
 function render() {
   document.getElementById('bulan').value = data.bulan;
